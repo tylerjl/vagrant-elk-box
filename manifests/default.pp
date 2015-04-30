@@ -32,14 +32,15 @@ class { 'elasticsearch':
 }
 
 elasticsearch::instance { 'es-01':
-  config => { 
-  'cluster.name' => 'vagrant_elasticsearch',
-  'index.number_of_replicas' => '0',
-  'index.number_of_shards'   => '1',
-  'network.host' => '0.0.0.0'
-  },        # Configuration hash
+  config        => { # Configuration hash
+  'cluster.name'                         => 'vagrant_elasticsearch',
+  'index.number_of_replicas'             => '0',
+  'index.number_of_shards'               => '1',
+  'network.host'                         => '0.0.0.0',
+  'discovery.zen.ping.multicast.enabled' => false,
+  },
   init_defaults => { }, # Init defaults hash
-  before => Exec['start kibana']
+  before        => Exec['start kibana']
 }
 
 elasticsearch::plugin{'royrusso/elasticsearch-HQ':
@@ -56,11 +57,30 @@ class { 'logstash':
   require      => [ Class['java'], Class['elasticsearch'] ],
 }
 
-file { '/etc/logstash/conf.d/logstash':
-  ensure  => '/vagrant/confs/logstash/logstash.conf',
-  require => [ Class['logstash'] ],
+logstash::configfile { 'sample_logs ':
+  content => '
+input {
+  exec {
+    interval => 5
+    command  => "bash -c \'for x in `seq 1 $(((RANDOM%10)+1))` ; do echo {\"message\":\"Number is: $x\",\"number\":$x} ; done\'"
+    codec    => "json_lines"
+  }
 }
 
+filter {
+  mutate {
+    remove_field => "command"
+  }
+}
+
+output {
+  elasticsearch {
+    cluster => "vagrant_elasticsearch"
+    host    => "localhost"
+  }
+}
+',
+}
 
 # Kibana
 package { 'curl':
