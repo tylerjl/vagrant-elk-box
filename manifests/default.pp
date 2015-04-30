@@ -43,9 +43,16 @@ elasticsearch::instance { 'es-01':
   before        => Exec['start kibana']
 }
 
-elasticsearch::plugin{'royrusso/elasticsearch-HQ':
-  module_dir => 'HQ',
-  instances  => 'es-01'
+Elasticsearch::Plugin { instances => 'es-01' }
+elasticsearch::plugin{
+  'royrusso/elasticsearch-HQ':
+    module_dir => 'HQ';
+  'lmenezes/elasticsearch-kopf':
+    module_dir => 'kopf';
+  'karmi/elasticsearch-paramedic':
+    module_dir => 'paramedic';
+  'lukas-vlcek/bigdesk':
+    module_dir => 'bigdesk';
 }
 
 # Logstash
@@ -62,7 +69,7 @@ logstash::configfile { 'sample_logs ':
 input {
   exec {
     interval => 5
-    command  => "bash -c \'for x in `seq 1 $(((RANDOM%10)+1))` ; do echo {\"message\":\"Number is: $x\",\"number\":$x} ; done\'"
+    command  => "bash -c \'for x in `seq 1 $(((RANDOM%10)+1))` ; do echo -n {\"message\":\"Here is a message from your system: $x\",\"severity\":$x,\"level\":\" ; if [ $x -gt 7 ] ; then echo -n ERROR ; else echo -n INFO ; fi ; echo \"} ; done\'"
     codec    => "json_lines"
   }
 }
