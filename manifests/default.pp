@@ -40,7 +40,7 @@ elasticsearch::instance { 'es-01':
   'discovery.zen.ping.multicast.enabled' => false,
   },
   init_defaults => { }, # Init defaults hash
-  before        => Exec['start kibana']
+  before        => Exec['start kibana'],
 }
 
 Elasticsearch::Plugin { instances => 'es-01' }
@@ -65,6 +65,7 @@ class { 'logstash':
 }
 
 logstash::configfile { 'sample_logs ':
+  require => Elasticsearch::Instance['es-01'],
   content => '
 input {
   exec {
