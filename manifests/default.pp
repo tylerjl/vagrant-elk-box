@@ -1,46 +1,25 @@
-define append_if_no_such_line($file, $line, $refreshonly = 'false') {
-   exec { "/bin/echo '$line' >> '$file'":
-      unless      => "/bin/grep -Fxqe '$line' '$file'",
-      path        => "/bin",
-      refreshonly => $refreshonly
-   }
-}
-
-# Update APT Cache
-class { 'apt':
-  always_apt_update => true,
-}
-
-exec { 'apt-get update':
-  before  => [ Class['logstash'] ],
-  command => '/usr/bin/apt-get update -qq'
-}
-
-file { '/vagrant/elasticsearch':
-  ensure => 'directory',
-  group  => 'vagrant',
-  owner  => 'vagrant',
-}
-
-# Java is required
-class { 'java': }
-
 # Elasticsearch
 class { 'elasticsearch':
+  autoupgrade  => true,
+  java_install => true,
   manage_repo  => true,
-  repo_version => '1.5',
+  repo_version => '2.x',
 }
 
 elasticsearch::instance { 'es-01':
-  config        => { # Configuration hash
-  'cluster.name'                         => 'vagrant_elasticsearch',
-  'index.number_of_replicas'             => '0',
-  'index.number_of_shards'               => '1',
-  'network.host'                         => '0.0.0.0',
-  'discovery.zen.ping.multicast.enabled' => false,
+  config => {
+    'cluster' => {
+      'name' => 'vagrant_elasticsearch',
+    },
+    'index' =>  {
+      'number_of_replicas' => '0',
+      'number_of_shards'   => '1',
+    },
+    'network' =>  {
+      'host'  => '0.0.0.0',
+    },
   },
-  init_defaults => { }, # Init defaults hash
-  before        => Exec['start kibana'],
+  before => Class['kibana4'],
 }
 
 Elasticsearch::Plugin { instances => 'es-01' }
@@ -51,64 +30,21 @@ elasticsearch::plugin{
     module_dir => 'kopf';
   'karmi/elasticsearch-paramedic':
     module_dir => 'paramedic';
-  'lukas-vlcek/bigdesk':
-    module_dir => 'bigdesk';
 }
 
 # Logstash
 class { 'logstash':
-  # autoupgrade  => true,
-  ensure       => 'present',
-  manage_repo  => true,
-  repo_version => '1.4',
-  require      => [ Class['java'], Class['elasticsearch'] ],
+  # autoupgrade => true,
+  ensure        => 'present',
+  manage_repo   => true,
+  repo_version  => '2.3',
+  require       => Class['elasticsearch'],
 }
 
 logstash::configfile { 'sample_logs ':
   require => Elasticsearch::Instance['es-01'],
-  content => '
-input {
-  exec {
-    interval => 5
-    command  => "bash -c \'for x in `seq 1 $(((RANDOM%10)+1))` ; do echo -n {\"message\":\"Here is a message from your system: $x\",\"severity\":$x,\"level\":\" ; if [ $x -gt 7 ] ; then echo -n ERROR ; else echo -n INFO ; fi ; echo \"} ; done\'"
-    codec    => "json_lines"
-  }
-}
-
-filter {
-  mutate {
-    remove_field => "command"
-  }
-}
-
-output {
-  elasticsearch {
-    cluster => "vagrant_elasticsearch"
-    host    => "localhost"
-  }
-}
-',
+  content => template('sample.conf.erb'),
 }
 
 # Kibana
-package { 'curl':
-  ensure  => 'present',
-  require => [ Class['apt'] ],
-}
-
-file { '/opt/kibana':
-  ensure => 'directory',
-  group  => 'vagrant',
-  owner  => 'vagrant',
-}
-
-exec { 'download_kibana':
-  command => '/usr/bin/curl -L https://download.elasticsearch.org/kibana/kibana/kibana-4.0.2-linux-x64.tar.gz | /bin/tar xvz -C /opt/kibana --strip-components 1',
-  require => [ Package['curl'], File['/opt/kibana'], Class['elasticsearch'] ],
-  timeout => 1800
-}
-
-exec {'start kibana':
-  command => '/bin/sleep 10 && /opt/kibana/bin/kibana & ',
-  require => [ Exec['download_kibana']]
-}
+include kibana4

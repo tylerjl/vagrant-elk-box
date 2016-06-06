@@ -1,0 +1,17 @@
+input {
+  exec {
+    interval => 5
+    command  => "bash -c 'for x in `seq 1 $(((RANDOM%10)+1))` ; do echo -n {\"message\":\"Here is a message from your system: $x\",\"severity\":$x,\"level\":\" ; if [ $x -gt 7 ] ; then echo -n ERROR ; else echo -n INFO ; fi ; echo \"} ; done'"
+    codec    => "json_lines"
+  }
+}
+
+filter {
+  mutate {
+    remove_field => "command"
+  }
+}
+
+output {
+  elasticsearch { }
+}
