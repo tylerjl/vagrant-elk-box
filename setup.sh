@@ -12,6 +12,7 @@ type puppet &>/dev/null || yum install -y puppet
 # Look for needed, not-present modules and install each one.
 for module in elasticsearch-{elasticsearch,logstash} \
               puppetlabs-java \
+              puppetlabs-apache \
               lesaux-kibana4 ; do
     if [ ! -d /etc/puppet/modules/${module##*-} ]; then
         puppet module install $module

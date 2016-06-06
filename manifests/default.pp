@@ -48,3 +48,11 @@ logstash::configfile { 'sample_logs ':
 
 # Kibana
 include kibana4
+
+# Apache
+class { 'apache':
+  logroot_mode => '744',
+  before       => [
+    Class['logstash'],
+  ],
+}
