@@ -10,6 +10,10 @@ all:
 puppet:
 	vagrant provision --provision-with puppet
 
+.PHONY: traffic
+traffic:
+	./generate_traffic.py
+
 .PHONY: clean
 clean:
 	vagrant destroy -f
