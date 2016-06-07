@@ -52,7 +52,14 @@ include kibana4
 # Apache
 class { 'apache':
   logroot_mode => '744',
+  log_formats  => {
+    combined => '%a %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"'
+  },
   before       => [
     Class['logstash'],
   ],
+}
+
+class { 'apache::mod::remoteip':
+  proxy_ips => []
 }
