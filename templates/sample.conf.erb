@@ -1,16 +1,19 @@
 input {
   file {
     path => '/var/log/httpd/access_log'
+    type => 'apache'
   }
 }
 
 filter {
-  grok {
-    match => { 'message' => '%{COMBINEDAPACHELOG}' }
-  }
+  if [type] == 'apache' {
+    grok {
+      match => { 'message' => '%{COMBINEDAPACHELOG}' }
+    }
 
-  useragent {
-    source => 'agent'
+    useragent {
+      source => 'agent'
+    }
   }
 }
 
