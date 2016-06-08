@@ -4,23 +4,22 @@ class { 'elasticsearch':
   java_install => true,
   manage_repo  => true,
   repo_version => '2.x',
-}
-
-elasticsearch::instance { 'es-01':
-  config => {
+  config       => {
     'cluster' => {
       'name' => 'vagrant_elasticsearch',
     },
     'index' =>  {
       'number_of_replicas' => '0',
-      'number_of_shards'   => '1',
+      'number_of_shards'   => '2',
     },
     'network' =>  {
       'host'  => '0.0.0.0',
     },
   },
-  before => Class['kibana4'],
 }
+
+Elasticsearch::Instance { before => Class['kibana4'] }
+elasticsearch::instance { 'es-01': }
 
 Elasticsearch::Plugin { instances => 'es-01' }
 elasticsearch::plugin{
